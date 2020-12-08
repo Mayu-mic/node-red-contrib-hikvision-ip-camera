@@ -1,6 +1,6 @@
 {
   "name": "node-red-contrib-hikvision-ip-camera",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Hikvision ip camera client for Node-RED",
   "main": "dist/nodes/face-detection.js",
   "scripts": {
