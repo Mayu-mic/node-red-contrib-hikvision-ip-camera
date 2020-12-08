@@ -27,34 +27,6 @@ interface EventMessage {
   }
 }
 
-const parseMessage = (chunk: Buffer): EventMessage | undefined => {
-  const chunkStr = chunk.toString()
-
-  if (!chunkStr.match(/^\[MSG_SEND\]/)) return
-
-  const extracted = chunkStr.replace(/^\[MSG_SEND\]\s+(.+)\n?/, '$1')
-  const [
-    alermType,
-    employeeId,
-    temperature,
-    isTemperatureAbnormalNum,
-    picturePath,
-    thermalPicturePath,
-    visibleLightPicturePath,
-  ] = extracted.split(',')
-  return {
-    alermType,
-    employeeId: parseInt(employeeId),
-    temperature: parseFloat(temperature),
-    isTemperatureAbnormal: isTemperatureAbnormalNum === '1',
-    picturePaths: {
-      picture: picturePath ? picturePath : null,
-      thermal: thermalPicturePath ? thermalPicturePath : null,
-      visibleLight: visibleLightPicturePath ? visibleLightPicturePath : null,
-    },
-  }
-}
-
 export class Client {
   private process: ChildProcessByStdio<null, Readable, Readable> | undefined = undefined
   private emitter: EventEmitter = new EventEmitter()
@@ -90,7 +62,7 @@ export class Client {
       spawn,
       emitter: this.emitter,
       config: this.config,
-      parseMessage,
+      parseMessage: Client.parseMessage,
       io: {
         process: undefined,
       },
@@ -117,5 +89,33 @@ export class Client {
     `
     vm.runInContext(code, context)
     return context.io.process
+  }
+
+  private static parseMessage(chunk: Buffer): EventMessage | undefined {
+    const chunkStr = chunk.toString()
+
+    if (!chunkStr.match(/^\[MSG_SEND\]/)) return
+
+    const extracted = chunkStr.replace(/^\[MSG_SEND\]\s+(.+)\n?/, '$1')
+    const [
+      alermType,
+      employeeId,
+      temperature,
+      isTemperatureAbnormalNum,
+      picturePath,
+      thermalPicturePath,
+      visibleLightPicturePath,
+    ] = extracted.split(',')
+    return {
+      alermType,
+      employeeId: parseInt(employeeId),
+      temperature: parseFloat(temperature),
+      isTemperatureAbnormal: isTemperatureAbnormalNum === '1',
+      picturePaths: {
+        picture: picturePath ? picturePath : null,
+        thermal: thermalPicturePath ? thermalPicturePath : null,
+        visibleLight: visibleLightPicturePath ? visibleLightPicturePath : null,
+      },
+    }
   }
 }
