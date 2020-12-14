@@ -28,7 +28,7 @@ module.exports = (RED: NodeAPI) => {
       client.on('afterStart', () => this.status({ fill: 'green', text: 'camera connected.' }))
       client.on('data', (data, picturePaths) => {
         const payload: Payload = { ...data, picturePaths }
-        this.send({ payload: payload })
+        this.send({ payload })
       })
       client.on('error', (output) => this.log(`HikvisionCameraEvent error: ${output}`))
       client.on('failedStart', () => {
