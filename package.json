@@ -1,22 +1,19 @@
 {
   "name": "node-red-contrib-hikvision-ip-camera",
-  "version": "1.0.1",
+  "version": "2.0.0",
   "description": "Hikvision ip camera client for Node-RED",
-  "main": "dist/nodes/face-detection.js",
+  "main": "dist/nodes/hikvision-camera-event.js",
   "scripts": {
-    "build": "npm-run-all build:*",
-    "build:node": "npm run copy:html && tsc",
-    "build:client": "cd client/linux64/proj && make clean && make",
+    "build": "npm run copy:html && tsc",
+    "prebuild": "npm run clean",
     "copy:html": "mkdir -p dist/nodes/ && cpx \"nodes/*.html\" \"dist/nodes/\"",
-    "clean": "npm-run-all clean:node clean:client",
-    "clean:node": "rimraf ./dist",
-    "clean:client": "cd client/linux64/proj && make clean",
+    "clean": "rimraf ./dist",
     "postinstall": "npm run build"
   },
   "node-red": {
     "nodes": {
-      "face-detection": "dist/nodes/face-detection.js",
-      "ivms-config": "dist/nodes/ivms-config.js"
+      "hikvision-camera-event": "dist/nodes/hikvision-camera-event.js",
+      "hikvision-camera-config": "dist/nodes/hikvision-camera-config.js"
     }
   },
   "keywords": [],
@@ -26,20 +23,23 @@
     "type": "git",
     "url": "https://github.com/Mayu-mic/node-red-contrib-hikvision-ip-camera.git"
   },
-  "os": [
-    "linux"
-  ],
   "devDependencies": {
     "@types/node-red": "^1.1.1",
+    "@types/request": "^2.48.5",
     "@typescript-eslint/eslint-plugin": "^4.4.0",
     "@typescript-eslint/parser": "^4.4.0",
     "cpx": "^1.5.0",
     "eslint": "^7.10.0",
     "eslint-config-prettier": "^6.12.0",
     "eslint-plugin-prettier": "^3.1.4",
-    "npm-run-all": "^4.1.5",
     "prettier": "^2.1.2",
     "rimraf": "^3.0.2",
+    "ts-node": "^9.1.1",
+    "tsconfig-paths": "^3.9.0",
     "typescript": "^4.1.2"
+  },
+  "dependencies": {
+    "net-keepalive": "^1.4.0",
+    "request": "^2.88.2"
   }
 }
