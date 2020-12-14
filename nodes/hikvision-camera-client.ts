@@ -98,15 +98,18 @@ export class HikvisionCameraClient {
         this.sendAndReset()
         this.emitter.emit('data', json, [])
       }
-    } else if (lines[0].match(/Content-Disposition\:\sform-data/)) {
-      this.filename = lines[0].match(/filename=\"([a-zA-Z0-9\.]+)\"/)?.[1]
-      const countStr = lines[2].match(/Content-Length:\s(\d+)/)?.[1]
-      if (countStr) {
-        this.pictureContentLength = parseInt(countStr)
-      }
-      this.pictureBuffer = lines[5]
     } else {
-      this.pictureBuffer += chunk
+      if (lines[0].match(/Content-Disposition\:\sform-data/)) {
+        this.filename = lines[0].match(/filename=\"([a-zA-Z0-9\.]+)\"/)?.[1]
+        const countStr = lines[2].match(/Content-Length:\s(\d+)/)?.[1]
+        if (countStr) {
+          this.pictureContentLength = parseInt(countStr)
+        }
+        this.pictureBuffer = lines[5]
+      } else {
+        this.pictureBuffer += chunk
+      }
+
       if (
         this.filename &&
         this.pictureContentLength &&
