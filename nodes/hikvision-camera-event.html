@@ -1,0 +1,31 @@
+<script type="text/javascript">
+    RED.nodes.registerType('hikvision-camera-event',{
+        category: 'advanced-function',
+        color: '#FFAAAA',
+        defaults: {
+            name: { value: "" },
+            camera: { value: "", type: "hikvision-camera-config" }
+        },
+        inputs:0,
+        outputs:1,
+        icon: "bridge.png",
+        label: function() {
+            return this.name || "Hikvision Camera Event";
+        }
+    });
+</script>
+
+<script type="text/html" data-template-name="hikvision-camera-event">
+    <div class="form-row">
+        <label for="node-input-name"><i class="fa fa-user"></i> Name</label>
+        <input type="text" id="node-input-name" placeholder="Name">
+    </div>
+    <div class="form-row">
+        <label for="node-input-camera"><i class="fa fa-camera"></i> Camera</label>
+        <input id="node-input-camera">
+    </div>
+</script>
+
+<script type="text/html" data-help-name="hikvision-camera-event">
+    <p></p>
+</script>
