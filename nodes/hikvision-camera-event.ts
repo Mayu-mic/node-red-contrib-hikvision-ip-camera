@@ -31,9 +31,9 @@ module.exports = (RED: NodeAPI) => {
         this.send({ payload })
       })
       client.on('error', (output) => this.log(`HikvisionCameraEvent error: ${output}`))
-      client.on('failedStart', () => {
-        this.error('error: failed to connect.')
-        this.status({ fill: 'red', text: 'error: failed to connect.' })
+      client.on('failedStart', (statusCode, statusMessage) => {
+        this.error(`failed to connect. statusCode: ${statusCode} statusMessage: ${statusMessage}`)
+        this.status({ fill: 'red', text: `failed to connect. statusCode: ${statusCode}` })
       })
 
       client.connect()

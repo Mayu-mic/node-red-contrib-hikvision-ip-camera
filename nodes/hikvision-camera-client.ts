@@ -35,11 +35,9 @@ export class HikvisionCameraClient {
       },
     })
 
-    this.emitter.emit('afterStart')
-
     req.on('complete', (resp) => {
-      if (resp.statusCode == 404) {
-        this.emitter.emit('failedStart')
+      if (resp.statusCode !== 200) {
+        this.emitter.emit('failedStart', resp.statusCode, resp.statusMessage)
       }
     })
 
@@ -48,6 +46,8 @@ export class HikvisionCameraClient {
       socket.setKeepAlive(true)
       NetKeepAlive.setKeepAliveInterval(socket, 5000)
       NetKeepAlive.setKeepAliveProbes(socket, 1)
+
+      this.emitter.emit('afterStart')
 
       socket.on('data', (data) => this.handleData(data))
       socket.on('error', (e) => this.emitter.emit('error', e.message))
@@ -61,7 +61,7 @@ export class HikvisionCameraClient {
 
   on(event: 'beforeStart', listener: () => void): void
   on(event: 'afterStart', listener: () => void): void
-  on(event: 'failedStart', listener: () => void): void
+  on(event: 'failedStart', listener: (statusCode: number, statusMessage: string) => void): void
   on(event: 'data', listener: (data: Hikvision.Event, pictures: HikvisionEventPictures) => void): void
   on(event: 'error', listener: (output: string) => void): void
   on(event: 'stop', listener: () => void): void
