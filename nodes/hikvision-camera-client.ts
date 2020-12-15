@@ -37,7 +37,7 @@ export class HikvisionCameraClient {
 
     req.on('complete', (resp) => {
       if (resp.statusCode !== 200) {
-        this.emitter.emit('failedStart')
+        this.emitter.emit('failedStart', resp.statusCode, resp.statusMessage)
       }
     })
 
@@ -61,7 +61,7 @@ export class HikvisionCameraClient {
 
   on(event: 'beforeStart', listener: () => void): void
   on(event: 'afterStart', listener: () => void): void
-  on(event: 'failedStart', listener: () => void): void
+  on(event: 'failedStart', listener: (statusCode: number, statusMessage: string) => void): void
   on(event: 'data', listener: (data: Hikvision.Event, pictures: HikvisionEventPictures) => void): void
   on(event: 'error', listener: (output: string) => void): void
   on(event: 'stop', listener: () => void): void
