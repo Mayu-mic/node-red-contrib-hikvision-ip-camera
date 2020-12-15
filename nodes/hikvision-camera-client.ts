@@ -51,6 +51,18 @@ export class HikvisionCameraClient {
 
       socket.on('data', (data) => this.handleData(data))
       socket.on('error', (e) => this.emitter.emit('error', e.message))
+
+      // socket event log
+      const logEvent = ['drain', 'connect', 'timeout', 'lookup', 'end', 'close']
+      logEvent.forEach((event) => {
+        socket.on(event, () => console.log(`socket event: "${event}"`))
+      })
+    })
+
+    // request event log
+    const logEvent = ['request', 'response', 'data', 'error', 'complete', 'pipe', 'socket']
+    logEvent.forEach((event) => {
+      req.on(event, () => console.log(`request event: ${event}`))
     })
   }
 
