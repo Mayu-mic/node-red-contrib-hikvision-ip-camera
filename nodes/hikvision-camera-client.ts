@@ -36,7 +36,7 @@ export class HikvisionCameraClient {
     })
 
     req.on('complete', (resp) => {
-      if (resp.statusCode == 404) {
+      if (resp.statusCode !== 200) {
         this.emitter.emit('failedStart')
       }
     })
