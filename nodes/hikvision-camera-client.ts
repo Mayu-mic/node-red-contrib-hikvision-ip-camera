@@ -85,10 +85,12 @@ export class HikvisionCameraClient {
   }
 
   private handleChunk(chunk: string): void {
-    const lines = chunk.split('\r\n')
+    const lines: (string | undefined)[] = chunk.split('\r\n')
 
-    if (lines[0].match(/Content-Type\:\sapplication\/json/)) {
-      const utf8string = Buffer.from(lines[3], 'binary').toString()
+    if (lines[0]?.match(/Content-Type\:\sapplication\/json/)) {
+      const body = lines[3]
+      if (!body) return
+      const utf8string = Buffer.from(body, 'binary').toString()
       const json = JSON.parse(utf8string) as Hikvision.Event
       this.picturesCount = json.AccessControllerEvent?.picturesNumber ?? 0
       if (this.picturesCount > 0) {
@@ -99,13 +101,14 @@ export class HikvisionCameraClient {
         this.emitter.emit('data', json, [])
       }
     } else {
-      if (lines[0].match(/Content-Disposition\:\sform-data/)) {
-        this.filename = lines[0].match(/filename=\"([a-zA-Z0-9\.]+)\"/)?.[1]
-        const countStr = lines[2].match(/Content-Length:\s(\d+)/)?.[1]
+      if (lines[0]?.match(/Content-Disposition\:\sform-data/)) {
+        this.filename = lines[0]?.match(/filename=\"([a-zA-Z0-9\.]+)\"/)?.[1]
+        const countStr = lines[2]?.match(/Content-Length:\s(\d+)/)?.[1]
+        const body = lines[5] ?? ''
         if (countStr) {
           this.pictureContentLength = parseInt(countStr)
         }
-        this.pictureBuffer = lines[5]
+        this.pictureBuffer = body
       } else {
         this.pictureBuffer += chunk
       }
