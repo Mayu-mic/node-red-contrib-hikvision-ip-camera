@@ -8,7 +8,7 @@ interface HikvisionCameraClientOptions {
   password: string
 }
 
-type HikvisionCameraClientEvent = 'beforeStart' | 'afterStart' | 'failedStart' | 'data' | 'error' | 'stop'
+type HikvisionCameraClientEvent = 'beforeStart' | 'afterStart' | 'failedStart' | 'data' | 'error' | 'stop' | 'close'
 type HikvisionEventPictures = string[]
 
 export class HikvisionCameraClient {
@@ -36,6 +36,8 @@ export class HikvisionCameraClient {
     this.req.on('complete', (resp) => {
       if (resp.statusCode !== 200) {
         this.emitter.emit('failedStart', resp.statusCode, resp.statusMessage)
+      } else {
+        this.emitter.emit('close')
       }
       console.log(
         `[hikvision-camera-client] complete, statusCode: ${resp.statusCode}, statusMessage: ${resp.statusMessage}`
@@ -58,6 +60,7 @@ export class HikvisionCameraClient {
   on(event: 'data', listener: (data: Hikvision.Event, pictures: HikvisionEventPictures) => void): void
   on(event: 'error', listener: (output: string) => void): void
   on(event: 'stop', listener: () => void): void
+  on(event: 'close', listener: () => void): void
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   on(event: HikvisionCameraClientEvent, listener: (...args: any[]) => void): void {
     this.emitter.on(event, listener)
