@@ -60,6 +60,9 @@ export class HikvisionCameraClient {
     this.emitter.emit('stop')
     this.socket?.destroy()
     this.req?.abort()
+
+    this.socket = undefined
+    this.req = undefined
   }
 
   on(event: 'beforeStart', listener: () => void): void
