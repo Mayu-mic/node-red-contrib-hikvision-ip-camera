@@ -37,7 +37,7 @@ export class HikvisionCameraClient {
     })
 
     this.req.on('complete', (resp) => {
-      if (resp.statusCode !== 200) {
+      if (resp.statusCode == 401) {
         this.emitter.emit('failedStart', resp.statusCode, resp.statusMessage)
       } else {
         this.emitter.emit('close')
@@ -49,8 +49,7 @@ export class HikvisionCameraClient {
 
     this.req.on('socket', (socket) => {
       this.emitter.emit('afterStart')
-      this.timeout = setInterval(() => socket.write('ping'), 5000)
-      socket.on('close', () => this.timeout && clearTimeout(this.timeout))
+      socket.setKeepAlive(true)
     })
 
     this.req.on('data', (data) => this.handleData(data))
