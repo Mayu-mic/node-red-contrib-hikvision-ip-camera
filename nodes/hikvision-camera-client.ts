@@ -1,7 +1,6 @@
 import * as request from 'request'
 import * as fs from 'fs'
 import * as net from 'net'
-import NetKeepAlive from 'net-keepalive'
 import { EventEmitter } from 'events'
 
 interface HikvisionCameraClientOptions {
@@ -21,7 +20,6 @@ export class HikvisionCameraClient {
   private timeout?: NodeJS.Timeout
 
   private emitter = new EventEmitter()
-
 
   connect(): void {
     this.emitter.emit('beforeStart')
@@ -51,12 +49,7 @@ export class HikvisionCameraClient {
 
     this.req.on('socket', (socket) => {
       this.emitter.emit('afterStart')
-      this.socket = socket
-      socket.setKeepAlive(true)
-      NetKeepAlive.setKeepAliveInterval(socket, 5000)
-      NetKeepAlive.setKeepAliveProbes(socket, 1)
-
-      this.timeout = setInterval(() => socket.write('ping'), 1000)
+      this.timeout = setInterval(() => socket.write('ping'), 5000)
     })
 
     this.req.on('data', (data) => this.handleData(data))
