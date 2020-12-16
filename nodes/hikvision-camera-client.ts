@@ -16,8 +16,6 @@ export class HikvisionCameraClient {
   constructor(private options: HikvisionCameraClientOptions) {}
 
   private req?: request.Request
-  private socket?: net.Socket
-  private timeout?: NodeJS.Timeout
 
   private emitter = new EventEmitter()
 
@@ -58,13 +56,9 @@ export class HikvisionCameraClient {
 
   disconnect(): void {
     this.emitter.emit('stop')
-    this.timeout && clearTimeout(this.timeout)
-    this.socket?.destroy()
     this.req?.abort()
 
-    this.socket = undefined
     this.req = undefined
-    this.timeout = undefined
   }
 
   on(event: 'beforeStart', listener: () => void): void
