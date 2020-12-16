@@ -50,6 +50,7 @@ export class HikvisionCameraClient {
     this.req.on('socket', (socket) => {
       this.emitter.emit('afterStart')
       this.timeout = setInterval(() => socket.write('ping'), 5000)
+      socket.on('close', () => this.timeout && clearTimeout(this.timeout))
     })
 
     this.req.on('data', (data) => this.handleData(data))
