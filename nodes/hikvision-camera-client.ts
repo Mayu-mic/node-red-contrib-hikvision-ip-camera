@@ -44,7 +44,11 @@ export class HikvisionCameraClient {
       )
     })
 
-    this.req.on('socket', () => this.emitter.emit('afterStart'))
+    this.req.on('socket', (socket) => {
+      this.emitter.emit('afterStart')
+      socket.setKeepAlive(true)
+    })
+
     this.req.on('data', (data) => this.handleData(data))
     this.req.on('error', (e) => this.emitter.emit('error', e.message))
   }
