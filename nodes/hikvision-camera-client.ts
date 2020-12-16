@@ -1,6 +1,7 @@
 import * as request from 'request'
 import * as fs from 'fs'
 import * as net from 'net'
+import NetKeepAlive from 'net-keepalive'
 import { EventEmitter } from 'events'
 
 interface HikvisionCameraClientOptions {
@@ -50,6 +51,8 @@ export class HikvisionCameraClient {
       this.emitter.emit('afterStart')
       this.socket = socket
       socket.setKeepAlive(true)
+      NetKeepAlive.setKeepAliveInterval(socket, 5000)
+      NetKeepAlive.setKeepAliveProbes(socket, 1)
     })
 
     this.req.on('data', (data) => this.handleData(data))
