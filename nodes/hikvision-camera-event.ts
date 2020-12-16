@@ -30,10 +30,15 @@ module.exports = (RED: NodeAPI) => {
         const payload: Payload = { ...data, picturePaths }
         this.send({ payload })
       })
-      client.on('error', (output) => this.log(`HikvisionCameraEvent error: ${output}`))
+      client.on('error', (output) => this.log(`error: ${output}`))
       client.on('failedStart', (statusCode, statusMessage) => {
         this.error(`failed to connect. statusCode: ${statusCode} statusMessage: ${statusMessage}`)
         this.status({ fill: 'red', text: `failed to connect. statusCode: ${statusCode}` })
+      })
+      client.on('close', () => {
+        this.status({ fill: 'yellow', text: 'reconnect in 10s' })
+        this.log('socket timeout. reconnect in 10s')
+        setTimeout(() => client.connect(), DELAY)
       })
 
       client.connect()
