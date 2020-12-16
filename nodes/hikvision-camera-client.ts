@@ -1,5 +1,6 @@
 import * as request from 'request'
 import * as fs from 'fs'
+import * as net from 'net'
 import { EventEmitter } from 'events'
 
 interface HikvisionCameraClientOptions {
@@ -15,6 +16,7 @@ export class HikvisionCameraClient {
   constructor(private options: HikvisionCameraClientOptions) {}
 
   private req?: request.Request
+  private socket?: net.Socket
 
   private emitter = new EventEmitter()
 
@@ -46,6 +48,7 @@ export class HikvisionCameraClient {
 
     this.req.on('socket', (socket) => {
       this.emitter.emit('afterStart')
+      this.socket = socket
       socket.setKeepAlive(true)
     })
 
@@ -55,6 +58,7 @@ export class HikvisionCameraClient {
 
   disconnect(): void {
     this.emitter.emit('stop')
+    this.socket?.destroy()
     this.req?.abort()
   }
 
