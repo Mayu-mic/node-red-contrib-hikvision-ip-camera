@@ -1,6 +1,5 @@
 import * as request from 'request'
 import * as fs from 'fs'
-import * as net from 'net'
 import { EventEmitter } from 'events'
 
 interface HikvisionCameraClientOptions {
