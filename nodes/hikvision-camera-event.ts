@@ -37,8 +37,8 @@ module.exports = (RED: NodeAPI) => {
         this.status({ fill: 'red', text: `failed to connect. statusCode: ${statusCode}` })
       })
       client.on('close', () => {
-        this.status({ fill: 'yellow', text: 'reconnect in 10s' })
-        this.log('socket timeout. reconnect in 10s')
+        this.status({ fill: 'yellow', text: `reconnect in ${RECONNECT_DELAY / 1000}s` })
+        this.log(`socket timeout. reconnect in ${RECONNECT_DELAY / 1000}s`)
         setTimeout(() => client.connect(), RECONNECT_DELAY)
       })
 
