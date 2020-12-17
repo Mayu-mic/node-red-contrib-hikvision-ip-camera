@@ -41,24 +41,14 @@ export class HikvisionCameraClient {
       } else {
         this.emitter.emit('close')
       }
-      console.log(
-        `[hikvision-camera-client] complete, statusCode: ${resp.statusCode}, statusMessage: ${resp.statusMessage}`
-      )
+      console.log(`[hikvision-camera-client] complete, statusCode: ${resp.statusCode}, body: ${resp.body}`)
     })
 
     this.req.on('socket', (socket) => {
       this.emitter.emit('afterStart')
-      socket.setKeepAlive(true)
+      socket.setKeepAlive(true, 1000)
       NetKeepAlive.setKeepAliveInterval(socket, 5000)
-      NetKeepAlive.setKeepAliveProbes(socket, 1)
-
-      this.checkTimer = setInterval(() => {
-        console.log('check socket connectivity.')
-        if (socket.destroyed) {
-          console.log('[hikvision-camera-client] socket destroyed, disconnect.')
-          this.disconnect()
-        }
-      }, 5000)
+      NetKeepAlive.setKeepAliveProbes(socket, 12)
     })
 
     this.req.on('data', (data) => this.handleData(data))
