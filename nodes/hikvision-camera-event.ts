@@ -2,7 +2,8 @@ import { Node, NodeAPI, NodeDef } from 'node-red'
 import { HikvisionCameraConfigNode } from './hikvision-camera-config'
 import { HikvisionCameraClient } from './hikvision-camera-client'
 
-const DELAY = 10000
+const STARTUP_DELAY = 10000
+const RECONNECT_DELAY = 1000
 
 interface HikvisionCameraEventNodeDef extends NodeDef {
   camera: string
@@ -38,7 +39,7 @@ module.exports = (RED: NodeAPI) => {
       client.on('close', () => {
         this.status({ fill: 'yellow', text: 'reconnect in 10s' })
         this.log('socket timeout. reconnect in 10s')
-        setTimeout(() => client.connect(), DELAY)
+        setTimeout(() => client.connect(), RECONNECT_DELAY)
       })
 
       client.connect()
@@ -47,7 +48,7 @@ module.exports = (RED: NodeAPI) => {
         client.disconnect()
         this.status({ fill: 'yellow', text: 'closed.' })
       })
-    }, DELAY)
+    }, STARTUP_DELAY)
   }
   RED.nodes.registerType('hikvision-camera-event', HikvisionCameraEventNode)
 }
