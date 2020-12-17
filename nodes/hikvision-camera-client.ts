@@ -1,5 +1,6 @@
 import * as request from 'request'
 import * as fs from 'fs'
+import * as net from 'net'
 import NetKeepAlive from 'net-keepalive'
 import { EventEmitter } from 'events'
 
@@ -9,20 +10,21 @@ interface HikvisionCameraClientOptions {
   password: string
 }
 
-type HikvisionCameraClientEvent = 'beforeStart' | 'afterStart' | 'failedStart' | 'data' | 'error' | 'stop' | 'close'
+type HikvisionCameraClientEvent = 'connected' | 'failedConnect' | 'data' | 'error' | 'closed' | 'disconnected'
 type HikvisionEventPictures = string[]
 
 export class HikvisionCameraClient {
   constructor(private options: HikvisionCameraClientOptions) {}
 
   private req?: request.Request
+  private socket?: net.Socket
+  private timeout?: NodeJS.Timeout
 
   private emitter = new EventEmitter()
-  private checkTimer?: NodeJS.Timeout
+
+  private readonly RECONNECT_DELAY = 10000
 
   connect(): void {
-    this.emitter.emit('beforeStart')
-
     const url = `http://${this.options.host}/ISAPI/event/notification/alertStream`
     this.req = request.get(url, {
       auth: {
@@ -37,43 +39,45 @@ export class HikvisionCameraClient {
 
     this.req.on('complete', (resp) => {
       if (resp.statusCode == 401) {
-        this.emitter.emit('failedStart', resp.statusCode, resp.statusMessage)
-      } else {
-        this.emitter.emit('close')
+        this.emitter.emit('failedConnect', resp.statusCode, resp.statusMessage)
       }
-      console.log(`[hikvision-camera-client] complete, statusCode: ${resp.statusCode}, body: ${resp.body}`)
+      this.log(`complete, statusCode: ${resp.statusCode}, body: ${resp.body}`)
     })
 
     this.req.on('socket', (socket) => {
-      this.emitter.emit('afterStart')
+      this.socket = socket
       socket.setKeepAlive(true, 1000)
       NetKeepAlive.setKeepAliveInterval(socket, 5000)
       NetKeepAlive.setKeepAliveProbes(socket, 12)
-    })
 
-    this.req.on('data', (data) => this.handleData(data))
-    this.req.on('error', (e) => this.emitter.emit('error', e.message))
+      socket.on('data', (data) => this.handleData(data))
+      socket.on('error', (e) => this.emitter.emit('error', e.message))
+      socket.on('close', () => {
+        this.emitter.emit('closed')
+        this.log(`socket closed, reconnecting...`)
+        this.timeout = setTimeout(() => this.connect(), this.RECONNECT_DELAY)
+      })
+      this.emitter.emit('connected')
+    })
   }
 
   disconnect(): void {
-    this.emitter.emit('stop')
+    this.socket?.destroy()
     this.req?.abort()
-
-    if (this.checkTimer) {
-      clearTimeout(this.checkTimer)
+    if (this.timeout) {
+      clearTimeout(this.timeout)
     }
-
     this.req = undefined
-    this.checkTimer = undefined
+    this.socket = undefined
+    this.emitter.emit('disconnected')
   }
 
-  on(event: 'beforeStart', listener: () => void): void
-  on(event: 'afterStart', listener: () => void): void
-  on(event: 'failedStart', listener: (statusCode: number, statusMessage: string) => void): void
+  on(event: 'connected', listener: () => void): void
+  on(event: 'failedConnect', listener: (statusCode: number, statusMessage: string) => void): void
   on(event: 'data', listener: (data: Hikvision.Event, pictures: HikvisionEventPictures) => void): void
   on(event: 'error', listener: (output: string) => void): void
-  on(event: 'stop', listener: () => void): void
-  on(event: 'close', listener: () => void): void
+  on(event: 'closed', listener: () => void): void
+  on(event: 'disconnected', listener: () => void): void
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   on(event: HikvisionCameraClientEvent, listener: (...args: any[]) => void): void {
     this.emitter.on(event, listener)
@@ -129,7 +133,7 @@ export class HikvisionCameraClient {
       ) {
         const path = `${__dirname}/${this.filename}`
         fs.writeFileSync(path, this.pictureBuffer, 'binary')
-        console.log(`${path} wrote.`)
+        this.log(`${path} wrote.`)
         this.pictures.push(path)
         this.pictureBuffer = ''
         this.pictureContentLength = undefined
@@ -151,5 +155,9 @@ export class HikvisionCameraClient {
     this.pictureBuffer = ''
     this.pictures = []
     this.picturesCount = 0
+  }
+
+  private log(str: string) {
+    console.log(`[hikvision-camera-client] ${str}`)
   }
 }

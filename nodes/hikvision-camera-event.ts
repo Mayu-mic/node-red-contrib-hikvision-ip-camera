@@ -3,7 +3,6 @@ import { HikvisionCameraConfigNode } from './hikvision-camera-config'
 import { HikvisionCameraClient } from './hikvision-camera-client'
 
 const STARTUP_DELAY = 10000
-const RECONNECT_DELAY = 1000
 
 interface HikvisionCameraEventNodeDef extends NodeDef {
   camera: string
@@ -26,20 +25,18 @@ module.exports = (RED: NodeAPI) => {
 
     setTimeout(() => {
       const client = new HikvisionCameraClient(this.config)
-      client.on('afterStart', () => this.status({ fill: 'green', text: 'camera connected.' }))
+      client.on('connected', () => this.status({ fill: 'green', text: 'camera connected.' }))
       client.on('data', (data, picturePaths) => {
         const payload: Payload = { ...data, picturePaths }
         this.send({ payload })
       })
       client.on('error', (output) => this.log(`error: ${output}`))
-      client.on('failedStart', (statusCode, statusMessage) => {
+      client.on('failedConnect', (statusCode, statusMessage) => {
         this.error(`failed to connect. statusCode: ${statusCode} statusMessage: ${statusMessage}`)
         this.status({ fill: 'red', text: `failed to connect. statusCode: ${statusCode}` })
       })
-      client.on('close', () => {
-        this.status({ fill: 'yellow', text: `reconnect in ${RECONNECT_DELAY / 1000}s` })
-        this.log(`socket timeout. reconnect in ${RECONNECT_DELAY / 1000}s`)
-        setTimeout(() => client.connect(), RECONNECT_DELAY)
+      client.on('closed', () => {
+        this.status({ fill: 'yellow', text: `reconnecting...` })
       })
 
       client.connect()
