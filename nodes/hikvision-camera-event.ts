@@ -2,7 +2,8 @@ import { Node, NodeAPI, NodeDef } from 'node-red'
 import { HikvisionCameraConfigNode } from './hikvision-camera-config'
 import { HikvisionCameraClient } from './hikvision-camera-client'
 
-const DELAY = 10000
+const STARTUP_DELAY = 10000
+const RECONNECT_DELAY = 1000
 
 interface HikvisionCameraEventNodeDef extends NodeDef {
   camera: string
@@ -30,10 +31,15 @@ module.exports = (RED: NodeAPI) => {
         const payload: Payload = { ...data, picturePaths }
         this.send({ payload })
       })
-      client.on('error', (output) => this.log(`HikvisionCameraEvent error: ${output}`))
+      client.on('error', (output) => this.log(`error: ${output}`))
       client.on('failedStart', (statusCode, statusMessage) => {
         this.error(`failed to connect. statusCode: ${statusCode} statusMessage: ${statusMessage}`)
         this.status({ fill: 'red', text: `failed to connect. statusCode: ${statusCode}` })
+      })
+      client.on('close', () => {
+        this.status({ fill: 'yellow', text: `reconnect in ${RECONNECT_DELAY / 1000}s` })
+        this.log(`socket timeout. reconnect in ${RECONNECT_DELAY / 1000}s`)
+        setTimeout(() => client.connect(), RECONNECT_DELAY)
       })
 
       client.connect()
@@ -42,7 +48,7 @@ module.exports = (RED: NodeAPI) => {
         client.disconnect()
         this.status({ fill: 'yellow', text: 'closed.' })
       })
-    }, DELAY)
+    }, STARTUP_DELAY)
   }
   RED.nodes.registerType('hikvision-camera-event', HikvisionCameraEventNode)
 }

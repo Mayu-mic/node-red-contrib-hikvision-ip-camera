@@ -1,8 +1,7 @@
 import * as request from 'request'
-import * as net from 'net'
 import * as fs from 'fs'
-import { EventEmitter } from 'events'
 import NetKeepAlive from 'net-keepalive'
+import { EventEmitter } from 'events'
 
 interface HikvisionCameraClientOptions {
   host: string
@@ -10,13 +9,13 @@ interface HikvisionCameraClientOptions {
   password: string
 }
 
-type HikvisionCameraClientEvent = 'beforeStart' | 'afterStart' | 'failedStart' | 'data' | 'error' | 'stop'
+type HikvisionCameraClientEvent = 'beforeStart' | 'afterStart' | 'failedStart' | 'data' | 'error' | 'stop' | 'close'
 type HikvisionEventPictures = string[]
 
 export class HikvisionCameraClient {
   constructor(private options: HikvisionCameraClientOptions) {}
 
-  private socket?: net.Socket
+  private req?: request.Request
 
   private emitter = new EventEmitter()
 
@@ -24,7 +23,7 @@ export class HikvisionCameraClient {
     this.emitter.emit('beforeStart')
 
     const url = `http://${this.options.host}/ISAPI/event/notification/alertStream`
-    const req = request.get(url, {
+    this.req = request.get(url, {
       auth: {
         user: this.options.username,
         pass: this.options.password,
@@ -35,28 +34,33 @@ export class HikvisionCameraClient {
       },
     })
 
-    req.on('complete', (resp) => {
-      if (resp.statusCode !== 200) {
+    this.req.on('complete', (resp) => {
+      if (resp.statusCode == 401) {
         this.emitter.emit('failedStart', resp.statusCode, resp.statusMessage)
+      } else {
+        this.emitter.emit('close')
       }
+      console.log(
+        `[hikvision-camera-client] complete, statusCode: ${resp.statusCode}, statusMessage: ${resp.statusMessage}`
+      )
     })
 
-    req.on('socket', (socket) => {
-      this.socket = socket
+    this.req.on('socket', (socket) => {
+      this.emitter.emit('afterStart')
       socket.setKeepAlive(true)
       NetKeepAlive.setKeepAliveInterval(socket, 5000)
       NetKeepAlive.setKeepAliveProbes(socket, 1)
-
-      this.emitter.emit('afterStart')
-
-      socket.on('data', (data) => this.handleData(data))
-      socket.on('error', (e) => this.emitter.emit('error', e.message))
     })
+
+    this.req.on('data', (data) => this.handleData(data))
+    this.req.on('error', (e) => this.emitter.emit('error', e.message))
   }
 
   disconnect(): void {
     this.emitter.emit('stop')
-    this.socket?.destroy()
+    this.req?.abort()
+
+    this.req = undefined
   }
 
   on(event: 'beforeStart', listener: () => void): void
@@ -65,6 +69,7 @@ export class HikvisionCameraClient {
   on(event: 'data', listener: (data: Hikvision.Event, pictures: HikvisionEventPictures) => void): void
   on(event: 'error', listener: (output: string) => void): void
   on(event: 'stop', listener: () => void): void
+  on(event: 'close', listener: () => void): void
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   on(event: HikvisionCameraClientEvent, listener: (...args: any[]) => void): void {
     this.emitter.on(event, listener)
@@ -77,7 +82,7 @@ export class HikvisionCameraClient {
   private pictures: HikvisionEventPictures = []
   private reservedEvent: Hikvision.Event | undefined = undefined
 
-  private handleData(data: Buffer): void {
+  private handleData(data: Buffer | string): void {
     data
       .toString('binary')
       .split('--MIME_boundary\r\n')
