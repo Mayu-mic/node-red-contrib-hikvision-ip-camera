@@ -18,6 +18,7 @@ export class HikvisionCameraClient {
   private req?: request.Request
 
   private emitter = new EventEmitter()
+  private checkTimer?: NodeJS.Timeout
 
   connect(): void {
     this.emitter.emit('beforeStart')
@@ -50,6 +51,14 @@ export class HikvisionCameraClient {
       socket.setKeepAlive(true)
       NetKeepAlive.setKeepAliveInterval(socket, 5000)
       NetKeepAlive.setKeepAliveProbes(socket, 1)
+
+      this.checkTimer = setInterval(() => {
+        console.log('check socket connectivity.')
+        if (socket.destroyed) {
+          console.log('[hikvision-camera-client] socket destroyed, disconnect.')
+          this.disconnect()
+        }
+      }, 5000)
     })
 
     this.req.on('data', (data) => this.handleData(data))
@@ -60,7 +69,12 @@ export class HikvisionCameraClient {
     this.emitter.emit('stop')
     this.req?.abort()
 
+    if (this.checkTimer) {
+      clearTimeout(this.checkTimer)
+    }
+
     this.req = undefined
+    this.checkTimer = undefined
   }
 
   on(event: 'beforeStart', listener: () => void): void
