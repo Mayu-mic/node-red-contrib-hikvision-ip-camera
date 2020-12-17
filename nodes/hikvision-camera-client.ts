@@ -40,6 +40,10 @@ export class HikvisionCameraClient {
     this.req.on('complete', (resp) => {
       if (resp.statusCode == 401) {
         this.emitter.emit('failedConnect', resp.statusCode, resp.statusMessage)
+      } else {
+        this.emitter.emit('closed')
+        this.log(`socket closed, reconnecting...`)
+        this.timeout = setTimeout(() => this.connect(), this.RECONNECT_DELAY)
       }
       this.log(`complete, statusCode: ${resp.statusCode}, body: ${resp.body}`)
     })
@@ -52,11 +56,6 @@ export class HikvisionCameraClient {
 
       socket.on('data', (data) => this.handleData(data))
       socket.on('error', (e) => this.emitter.emit('error', e.message))
-      socket.on('close', () => {
-        this.emitter.emit('closed')
-        this.log(`socket closed, reconnecting...`)
-        this.timeout = setTimeout(() => this.connect(), this.RECONNECT_DELAY)
-      })
       this.emitter.emit('connected')
     })
   }
