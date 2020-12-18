@@ -4,17 +4,24 @@ import * as net from 'net'
 import NetKeepAlive from 'net-keepalive'
 import { EventEmitter } from 'events'
 
-interface HikvisionCameraClientOptions {
+interface HikvisionCameraServerSettings {
   host: string
   username: string
   password: string
 }
 
-type HikvisionCameraClientEvent = 'connected' | 'failedConnect' | 'data' | 'error' | 'closed' | 'disconnected'
+interface HikvisionCameraClientSettings {
+  reconnect_delay_ms: number
+}
+
+type HikvisionCameraClientEvent = 'connected' | 'connectFailed' | 'data' | 'error' | 'closed' | 'disconnected'
 type HikvisionEventPictures = string[]
 
 export class HikvisionCameraClient {
-  constructor(private options: HikvisionCameraClientOptions) {}
+  constructor(
+    private serverSettings: HikvisionCameraServerSettings,
+    private clientSettings: HikvisionCameraClientSettings
+  ) {}
 
   private req?: request.Request
   private socket?: net.Socket
@@ -22,14 +29,12 @@ export class HikvisionCameraClient {
 
   private emitter = new EventEmitter()
 
-  private readonly RECONNECT_DELAY = 10000
-
   connect(): void {
-    const url = `http://${this.options.host}/ISAPI/event/notification/alertStream`
+    const url = `http://${this.serverSettings.host}/ISAPI/event/notification/alertStream`
     this.req = request.get(url, {
       auth: {
-        user: this.options.username,
-        pass: this.options.password,
+        user: this.serverSettings.username,
+        pass: this.serverSettings.password,
         sendImmediately: false,
       },
       headers: {
@@ -39,13 +44,13 @@ export class HikvisionCameraClient {
 
     this.req.on('complete', (resp) => {
       if (resp.statusCode == 401) {
-        this.emitter.emit('failedConnect', resp.statusCode, resp.statusMessage)
+        this.emitter.emit('connectFailed')
       } else {
         this.emitter.emit('closed')
-        this.log(`socket closed, reconnecting...`)
-        this.timeout = setTimeout(() => this.connect(), this.RECONNECT_DELAY)
+        this.info(`socket closed, reconnecting...`)
+        this.timeout = setTimeout(() => this.connect(), this.clientSettings.reconnect_delay_ms)
       }
-      this.log(`complete, statusCode: ${resp.statusCode}, body: ${resp.body}`)
+      this.info(`complete, statusCode: ${resp.statusCode}, body: ${resp.body}`)
     })
 
     this.req.on('socket', (socket) => {
@@ -68,11 +73,12 @@ export class HikvisionCameraClient {
     }
     this.req = undefined
     this.socket = undefined
+    this.timeout = undefined
     this.emitter.emit('disconnected')
   }
 
   on(event: 'connected', listener: () => void): void
-  on(event: 'failedConnect', listener: (statusCode: number, statusMessage: string) => void): void
+  on(event: 'connectFailed', listener: () => void): void
   on(event: 'data', listener: (data: Hikvision.Event, pictures: HikvisionEventPictures) => void): void
   on(event: 'error', listener: (output: string) => void): void
   on(event: 'closed', listener: () => void): void
@@ -132,7 +138,7 @@ export class HikvisionCameraClient {
       ) {
         const path = `${__dirname}/${this.filename}`
         fs.writeFileSync(path, this.pictureBuffer, 'binary')
-        this.log(`${path} wrote.`)
+        this.info(`${path} wrote.`)
         this.pictures.push(path)
         this.pictureBuffer = ''
         this.pictureContentLength = undefined
@@ -156,7 +162,7 @@ export class HikvisionCameraClient {
     this.picturesCount = 0
   }
 
-  private log(str: string) {
-    console.log(`[hikvision-camera-client] ${str}`)
+  private info(str: string) {
+    console.info(`[hikvision-camera-client] ${str}`)
   }
 }

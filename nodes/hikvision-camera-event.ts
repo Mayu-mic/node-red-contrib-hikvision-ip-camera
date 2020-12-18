@@ -24,20 +24,18 @@ module.exports = (RED: NodeAPI) => {
     this.status({ fill: 'yellow', text: 'connecting...' })
 
     setTimeout(() => {
-      const client = new HikvisionCameraClient(this.config)
+      const client = new HikvisionCameraClient(this.config, { reconnect_delay_ms: STARTUP_DELAY })
       client.on('connected', () => this.status({ fill: 'green', text: 'camera connected.' }))
       client.on('data', (data, picturePaths) => {
         const payload: Payload = { ...data, picturePaths }
         this.send({ payload })
       })
-      client.on('error', (output) => this.log(`error: ${output}`))
-      client.on('failedConnect', (statusCode, statusMessage) => {
-        this.error(`failed to connect. statusCode: ${statusCode} statusMessage: ${statusMessage}`)
-        this.status({ fill: 'red', text: `failed to connect. statusCode: ${statusCode}` })
+      client.on('error', (output) => this.error(output))
+      client.on('connectFailed', () => {
+        this.error(`failed to connect.`)
+        this.status({ fill: 'red', text: `failed to connect.` })
       })
-      client.on('closed', () => {
-        this.status({ fill: 'yellow', text: `reconnecting...` })
-      })
+      client.on('closed', () => this.status({ fill: 'yellow', text: `reconnecting in ${STARTUP_DELAY / 1000}s.` }))
 
       client.connect()
 
