@@ -88,7 +88,7 @@ export class HikvisionCameraClient {
     this.emitter.on(event, listener)
   }
 
-  private filename: string | undefined = undefined
+  private pictureFilename: string | undefined = undefined
   private pictureBuffer = ''
   private pictureContentLength: number | undefined = undefined
   private picturesCount = 0
@@ -106,6 +106,8 @@ export class HikvisionCameraClient {
     const lines: (string | undefined)[] = chunk.split('\r\n')
 
     if (lines[0]?.match(/Content-Type\:\sapplication\/json/)) {
+      this.reset()
+
       const body = lines[3]
       if (!body) return
       const utf8string = Buffer.from(body, 'binary').toString()
@@ -114,13 +116,11 @@ export class HikvisionCameraClient {
       if (this.picturesCount > 0) {
         this.reservedEvent = json
       } else {
-        // 何らかの要因で、画像が受信できなかった場合に、前のデータをemitする
-        this.sendAndReset()
         this.emitter.emit('data', json, [])
       }
     } else {
       if (lines[0]?.match(/Content-Disposition\:\sform-data/)) {
-        this.filename = lines[0]?.match(/filename=\"([a-zA-Z0-9\.]+)\"/)?.[1]
+        this.pictureFilename = lines[0]?.match(/filename=\"([a-zA-Z0-9\.]+)\"/)?.[1]
         const countStr = lines[2]?.match(/Content-Length:\s(\d+)/)?.[1]
         const body = lines[5] ?? ''
         if (countStr) {
@@ -132,11 +132,11 @@ export class HikvisionCameraClient {
       }
 
       if (
-        this.filename &&
+        this.pictureFilename &&
         this.pictureContentLength &&
         Buffer.byteLength(this.pictureBuffer, 'binary') >= this.pictureContentLength
       ) {
-        const path = `${__dirname}/${this.filename}`
+        const path = `${__dirname}/${this.pictureFilename}`
         fs.writeFileSync(path, this.pictureBuffer, 'binary')
         this.info(`${path} wrote.`)
         this.pictures.push(path)
@@ -145,18 +145,22 @@ export class HikvisionCameraClient {
       }
 
       if (this.pictures.length == this.picturesCount) {
-        this.sendAndReset()
+        this.sendReserved()
+        this.reset()
       }
     }
   }
 
-  private sendAndReset() {
+  private sendReserved() {
     if (this.reservedEvent) {
       this.emitter.emit('data', this.reservedEvent, this.pictures)
     }
-    this.filename = undefined
-    this.pictureContentLength = undefined
+  }
+
+  private reset() {
     this.reservedEvent = undefined
+    this.pictureFilename = undefined
+    this.pictureContentLength = undefined
     this.pictureBuffer = ''
     this.pictures = []
     this.picturesCount = 0
