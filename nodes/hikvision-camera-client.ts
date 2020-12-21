@@ -31,38 +31,43 @@ export class HikvisionCameraClient {
 
   connect(): void {
     const url = `http://${this.serverSettings.host}/ISAPI/event/notification/alertStream`
-    this.req = request.get(url, {
-      auth: {
-        user: this.serverSettings.username,
-        pass: this.serverSettings.password,
-        sendImmediately: false,
-      },
-      headers: {
-        Accept: 'multipart/x-mixed-replace',
-      },
-    })
+    try {
+      this.req = request.get(url, {
+        auth: {
+          user: this.serverSettings.username,
+          pass: this.serverSettings.password,
+          sendImmediately: false,
+        },
+        headers: {
+          Accept: 'multipart/x-mixed-replace',
+        },
+      })
 
-    this.req.on('complete', (resp) => {
-      if (resp.statusCode == 401) {
-        this.emitter.emit('connectFailed')
-      } else {
-        this.emitter.emit('closed')
-        this.info(`socket closed, reconnecting...`)
-        this.timeout = setTimeout(() => this.connect(), this.clientSettings.reconnect_delay_ms)
-      }
-      this.info(`complete, statusCode: ${resp.statusCode}, body: ${resp.body}`)
-    })
+      this.req.on('complete', (resp) => {
+        if (resp.statusCode == 401) {
+          this.emitter.emit('connectFailed')
+        } else {
+          this.emitter.emit('closed')
+          this.info(`socket closed, reconnecting...`)
+          this.timeout = setTimeout(() => this.connect(), this.clientSettings.reconnect_delay_ms)
+        }
+        this.info(`complete, statusCode: ${resp.statusCode}, body: ${resp.body}`)
+      })
 
-    this.req.on('socket', (socket) => {
-      this.socket = socket
-      socket.setKeepAlive(true, 1000)
-      NetKeepAlive.setKeepAliveInterval(socket, 5000)
-      NetKeepAlive.setKeepAliveProbes(socket, 12)
+      this.req.on('socket', (socket) => {
+        this.socket = socket
+        socket.setKeepAlive(true, 1000)
+        NetKeepAlive.setKeepAliveInterval(socket, 5000)
+        NetKeepAlive.setKeepAliveProbes(socket, 12)
 
-      socket.on('data', (data) => this.handleData(data))
-      socket.on('error', (e) => this.emitter.emit('error', e.message))
-      this.emitter.emit('connected')
-    })
+        socket.on('data', (data) => this.handleData(data))
+        socket.on('error', (e) => this.emitter.emit('error', e.message))
+        this.emitter.emit('connected')
+      })
+    } catch (e) {
+      this.error(e)
+      this.emitter.emit('connectFailed')
+    }
   }
 
   disconnect(): void {
@@ -168,5 +173,9 @@ export class HikvisionCameraClient {
 
   private info(str: string) {
     console.info(`[hikvision-camera-client] ${str}`)
+  }
+
+  private error(str: string) {
+    console.error(`[hikvision-camera-client] ${str}`)
   }
 }
