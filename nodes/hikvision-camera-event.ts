@@ -6,14 +6,12 @@ const STARTUP_DELAY = 10000
 
 interface HikvisionCameraEventNodeDef extends NodeDef {
   camera: string
-  keepAliveInterval: number
-  keepAliveProves: number
+  keepAliveInterval: string
+  keepAliveProves: string
 }
 
 export interface HikvisionCameraEventNode extends Node {
   config: HikvisionCameraConfigNode
-  keepAliveInterval: number
-  keepAliveProves: number
 }
 
 interface Payload extends Hikvision.Event {
@@ -24,16 +22,14 @@ module.exports = (RED: NodeAPI) => {
   function HikvisionCameraEventNode(this: HikvisionCameraEventNode, props: HikvisionCameraEventNodeDef) {
     RED.nodes.createNode(this, props)
     this.config = RED.nodes.getNode(props.camera) as HikvisionCameraConfigNode
-    this.keepAliveInterval = props.keepAliveInterval
-    this.keepAliveProves = props.keepAliveProves
 
     this.status({ fill: 'yellow', text: 'connecting...' })
 
     setTimeout(() => {
       const client = new HikvisionCameraClient(this.config, {
         reconnect_delay_ms: STARTUP_DELAY,
-        keepAliveInterval: this.keepAliveInterval,
-        keepAliveProbes: this.keepAliveProves,
+        keepAliveInterval: parseInt(props.keepAliveInterval),
+        keepAliveProbes: parseInt(props.keepAliveProves),
       })
       client.on('connected', () => this.status({ fill: 'green', text: 'camera connected.' }))
       client.on('data', (data, picturePaths) => {
