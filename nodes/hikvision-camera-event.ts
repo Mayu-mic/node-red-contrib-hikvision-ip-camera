@@ -6,6 +6,7 @@ const STARTUP_DELAY = 10000
 
 interface HikvisionCameraEventNodeDef extends NodeDef {
   camera: string
+  reconnectDelay: string
   keepAliveInterval: string
   keepAliveProves: string
 }
@@ -22,12 +23,13 @@ module.exports = (RED: NodeAPI) => {
   function HikvisionCameraEventNode(this: HikvisionCameraEventNode, props: HikvisionCameraEventNodeDef) {
     RED.nodes.createNode(this, props)
     this.config = RED.nodes.getNode(props.camera) as HikvisionCameraConfigNode
+    const reconnectDelay = parseInt(props.reconnectDelay)
 
     this.status({ fill: 'yellow', text: 'connecting...' })
 
     setTimeout(() => {
       const client = new HikvisionCameraClient(this.config, {
-        reconnect_delay_ms: STARTUP_DELAY,
+        reconnect_delay_ms: reconnectDelay,
         keepAliveInterval: parseInt(props.keepAliveInterval),
         keepAliveProbes: parseInt(props.keepAliveProves),
       })
@@ -41,7 +43,7 @@ module.exports = (RED: NodeAPI) => {
         this.error(`failed to connect.`)
         this.status({ fill: 'red', text: `failed to connect.` })
       })
-      client.on('closed', () => this.status({ fill: 'yellow', text: `reconnecting in ${STARTUP_DELAY / 1000}s.` }))
+      client.on('closed', () => this.status({ fill: 'yellow', text: `reconnecting in ${reconnectDelay / 1000}s.` }))
 
       client.connect()
 
