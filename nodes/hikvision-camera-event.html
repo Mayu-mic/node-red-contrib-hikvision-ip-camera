@@ -4,7 +4,10 @@
         color: '#FFAAAA',
         defaults: {
             name: { value: "" },
-            camera: { value: "", type: "hikvision-camera-config" }
+            camera: { value: "", type: "hikvision-camera-config" },
+            reconnectDelay: { value: 10000, required: true },
+            keepAliveInterval: { value: 5000, required: true },
+            keepAliveProves: { value: 12, required: true }
         },
         inputs:0,
         outputs:1,
@@ -23,6 +26,18 @@
     <div class="form-row">
         <label for="node-input-camera"><i class="fa fa-camera"></i> Camera</label>
         <input id="node-input-camera">
+    </div>
+    <div class="form-row">
+        <label for="node-config-input-reconnectDelay">Reconnect Delay</label>
+        <input type="number" id="node-input-reconnectDelay">
+    </div>
+    <div class="form-row">
+        <label for="node-config-input-keepAliveInterval">KeepAliveInterval</label>
+        <input type="number" id="node-input-keepAliveInterval">
+    </div>
+    <div class="form-row">
+        <label for="node-config-input-keepAliveProves">KeepAliveProves</label>
+        <input type="number" id="node-input-keepAliveProves">
     </div>
 </script>
 

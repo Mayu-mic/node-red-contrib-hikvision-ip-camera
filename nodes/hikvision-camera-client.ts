@@ -11,7 +11,9 @@ interface HikvisionCameraServerSettings {
 }
 
 interface HikvisionCameraClientSettings {
-  reconnect_delay_ms: number
+  reconnect_delay_ms?: number
+  keepAliveInterval?: number
+  keepAliveProbes?: number
 }
 
 type HikvisionCameraClientEvent = 'connected' | 'connectFailed' | 'data' | 'error' | 'closed' | 'disconnected'
@@ -49,7 +51,7 @@ export class HikvisionCameraClient {
         } else {
           this.emitter.emit('closed')
           this.info(`socket closed, reconnecting...`)
-          this.timeout = setTimeout(() => this.connect(), this.clientSettings.reconnect_delay_ms)
+          this.timeout = setTimeout(() => this.connect(), this.clientSettings.reconnect_delay_ms ?? 10000)
         }
         this.info(`complete, statusCode: ${resp.statusCode}, body: ${resp.body}`)
       })
@@ -57,8 +59,8 @@ export class HikvisionCameraClient {
       this.req.on('socket', (socket) => {
         this.socket = socket
         socket.setKeepAlive(true, 1000)
-        NetKeepAlive.setKeepAliveInterval(socket, 5000)
-        NetKeepAlive.setKeepAliveProbes(socket, 12)
+        NetKeepAlive.setKeepAliveInterval(socket, this.clientSettings.keepAliveInterval ?? 5000)
+        NetKeepAlive.setKeepAliveProbes(socket, this.clientSettings.keepAliveProbes ?? 12)
 
         socket.on('data', (data) => this.handleData(data))
         socket.on('error', (e) => this.emitter.emit('error', e.message))
